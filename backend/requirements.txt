@@ -6,7 +6,7 @@ cffi>=1.17.1  # Upgraded to Python 3.13 compatible version
 charset-normalizer==3.3.2
 cryptography==43.0.0  # Requires cffi>=1.17.0
 dj-database-url==2.1.0
-Django==5.2.3
+Django==4.2.13
 django-anymail==11.0  # Updated for Django 5.2
 django-cors-headers==4.4.0
 django-jazzmin==3.0.1  # Compatible with Python 3.13
@@ -38,7 +38,7 @@ stripe==8.0.0  # Python 3.13 compatible
 typing_extensions==4.11.0
 tzdata==2024.1
 uritemplate==4.1.1
-urllib3==2.2.1
+urllib3==1.26.18
 moviepy==2.2.1  # Development version with Python 3.13 support
 pytest
 pytest-django
