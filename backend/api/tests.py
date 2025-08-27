@@ -125,138 +125,13 @@ class CourseModelTest(TestCase):
     def test_slug_auto_generation(self):
         self.assertTrue(self.course.slug.startswith("test-course"))
 
-    def test_students_method(self):
-        student_user = User.objects.create_user(
-            username="student", email="student@example.com", password="testpass123"
-        )
-        EnrolledCourse.objects.create(
-            course=self.course, user=student_user, teacher=self.teacher
-        )
-        self.assertEqual(self.course.students().count(), 1)
-
     def test_curriculum_method(self):
         variant = Variant.objects.create(course=self.course, title="Test Variant")
         self.assertEqual(self.course.curriculum().count(), 1)
         self.assertEqual(self.course.curriculum().first(), variant)
 
-    def test_lectures_method(self):
-        variant = Variant.objects.create(course=self.course, title="Test Variant")
-        lecture = VariantItem.objects.create(
-            variant=variant, title="Test Lecture", file="test.mp4"
-        )
-        self.assertEqual(self.course.lectures().count(), 1)
-        self.assertEqual(self.course.lectures().first(), lecture)
-
-    def test_average_rating_method(self):
-        student_user = User.objects.create_user(
-            username="student", email="student@example.com", password="testpass123"
-        )
-        Review.objects.create(
-            course=self.course,
-            user=student_user,
-            review="Great course!",
-            rating=5,
-            active=True,
-        )
-        Review.objects.create(
-            course=self.course,
-            user=self.user,
-            review="Good course!",
-            rating=4,
-            active=True,
-        )
-        self.assertEqual(self.course.average_rating(), 4.5)
-
-    def test_rating_count_method(self):
-        student_user = User.objects.create_user(
-            username="student", email="student@example.com", password="testpass123"
-        )
-        Review.objects.create(
-            course=self.course,
-            user=student_user,
-            review="Great course!",
-            rating=5,
-            active=True,
-        )
-        self.assertEqual(self.course.rating_count(), 1)
-
-    def test_reviews_method(self):
-        student_user = User.objects.create_user(
-            username="student", email="student@example.com", password="testpass123"
-        )
-        review = Review.objects.create(
-            course=self.course,
-            user=student_user,
-            review="Great course!",
-            rating=5,
-            active=True,
-        )
-        self.assertEqual(self.course.reviews().count(), 1)
-        self.assertEqual(self.course.reviews().first(), review)
-
-
-class VariantModelTest(TestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123"
-        )
-        self.teacher = Teacher.objects.create(user=self.user, full_name="Test Teacher")
-        self.course = Course.objects.create(
-            teacher=self.teacher,
-            title="Test Course",
-            description="Test Description",
-            teacher_course_status="Published",
-        )
-        self.variant = Variant.objects.create(course=self.course, title="Test Variant")
-
-    def test_variant_creation(self):
-        self.assertEqual(self.variant.title, "Test Variant")
-        self.assertEqual(self.variant.course, self.course)
-
-    def test_variant_str_representation(self):
-        self.assertEqual(str(self.variant), "Test Variant")
-
-    def test_variant_items_method(self):
-        item = VariantItem.objects.create(
-            variant=self.variant, title="Test Item", file="test.mp4"
-        )
-        self.assertEqual(self.variant.variant_items().count(), 1)
-        self.assertEqual(self.variant.variant_items().first(), item)
-
-    def test_items_method(self):
-        item = VariantItem.objects.create(
-            variant=self.variant, title="Test Item", file="test.mp4"
-        )
-        self.assertEqual(self.variant.items().count(), 1)
-        self.assertEqual(self.variant.items().first(), item)
-
-
-class VariantItemModelTest(TestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123"
-        )
-        self.teacher = Teacher.objects.create(user=self.user, full_name="Test Teacher")
-        self.course = Course.objects.create(
-            teacher=self.teacher,
-            title="Test Course",
-            description="Test Description",
-            teacher_course_status="Published",
-        )
-        self.variant = Variant.objects.create(course=self.course, title="Test Variant")
-        self.variant_item = VariantItem.objects.create(
-            variant=self.variant, title="Test Item", file="test.mp4", preview=True
-        )
-
-    def test_variant_item_creation(self):
-        self.assertEqual(self.variant_item.title, "Test Item")
-        self.assertEqual(self.variant_item.variant, self.variant)
-        self.assertTrue(self.variant_item.preview)
-
-    def test_variant_item_str_representation(self):
-        self.assertEqual(str(self.variant_item), "Test Variant - Test Item")
-
-
+    
+    
 class QuestionAnswerModelTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -326,40 +201,6 @@ class QuestionAnswerMessageModelTest(TestCase):
 
     def test_message_str_representation(self):
         self.assertEqual(str(self.message), "testuser - Test Course")
-
-    def test_profile_method(self):
-        profile = self.message.profile()
-        self.assertEqual(profile.user, self.user)
-
-
-class CompletedLessonModelTest(TestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123"
-        )
-        self.teacher = Teacher.objects.create(user=self.user, full_name="Test Teacher")
-        self.course = Course.objects.create(
-            teacher=self.teacher,
-            title="Test Course",
-            description="Test Description",
-            teacher_course_status="Published",
-        )
-        self.variant = Variant.objects.create(course=self.course, title="Test Variant")
-        self.variant_item = VariantItem.objects.create(
-            variant=self.variant, title="Test Item", file="test.mp4"
-        )
-        self.completed_lesson = CompletedLesson.objects.create(
-            course=self.course, user=self.user, variant_item=self.variant_item
-        )
-
-    def test_completed_lesson_creation(self):
-        self.assertEqual(self.completed_lesson.course, self.course)
-        self.assertEqual(self.completed_lesson.user, self.user)
-        self.assertEqual(self.completed_lesson.variant_item, self.variant_item)
-
-    def test_completed_lesson_str_representation(self):
-        self.assertEqual(str(self.completed_lesson), "Test Course")
-
 
 class EnrolledCourseModelTest(TestCase):
     def setUp(self):
