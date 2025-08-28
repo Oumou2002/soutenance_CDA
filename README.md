@@ -1,7 +1,7 @@
 Soutenance CDA – Plateforme d’Apprentissage
  Description du projet
 
-Ce projet est une plateforme d’apprentissage en ligne développée dans le cadre de ma soutenance CDA.
+MySkillHub est une application web développée dans le cadre de ma soutenance CDA (Concepteur Développeur d’Applications).
 L’application permet :
 
 La gestion des cours et des modules.
