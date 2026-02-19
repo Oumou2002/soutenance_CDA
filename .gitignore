@@ -1,0 +1,7 @@
+# Python cache
+**/__pycache__/
+**/*.py[cod]
+
+# Local editor/OS junk
+.DS_Store
+Thumbs.db

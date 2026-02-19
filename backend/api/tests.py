@@ -1,5 +1,7 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from rest_framework import status
+from rest_framework.test import APITestCase
 from .models import (
     Teacher,
     Category,
@@ -415,3 +417,199 @@ class CountryModelTest(TestCase):
 
     def test_country_str_representation(self):
         self.assertEqual(str(self.country), "Test Country")
+
+
+class UserProfileAPITest(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="profileuser",
+            email="profile@example.com",
+            password="testpass123",
+        )
+        self.other_user = User.objects.create_user(
+            username="otheruser",
+            email="other@example.com",
+            password="testpass123",
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_get_own_profile(self):
+        response = self.client.get(f"/api/v1/user/profile/{self.user.id}/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["user"], self.user.id)
+
+    def test_update_own_profile(self):
+        payload = {"full_name": "Updated Name", "about": "Bio", "country": "FR"}
+        response = self.client.patch(
+            f"/api/v1/user/profile/{self.user.id}/", payload, format="multipart"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.profile.full_name, "Updated Name")
+        self.assertEqual(self.user.profile.country, "FR")
+
+    def test_cannot_get_other_user_profile(self):
+        response = self.client.get(f"/api/v1/user/profile/{self.other_user.id}/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class ChangePasswordAPITest(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="changepwd",
+            email="changepwd@example.com",
+            password="oldpass123",
+        )
+        self.other_user = User.objects.create_user(
+            username="otherpwd",
+            email="otherpwd@example.com",
+            password="oldpass123",
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_change_password_success(self):
+        payload = {
+            "user_id": self.user.id,
+            "old_password": "oldpass123",
+            "new_password": "newpass123",
+        }
+        response = self.client.post(
+            "/api/v1/user/change-password/", payload, format="multipart"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("newpass123"))
+
+    def test_change_password_forbidden_for_other_user(self):
+        payload = {
+            "user_id": self.other_user.id,
+            "old_password": "oldpass123",
+            "new_password": "newpass123",
+        }
+        response = self.client.post(
+            "/api/v1/user/change-password/", payload, format="multipart"
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class PasswordChangeAPITest(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="resetuser",
+            email="reset@example.com",
+            password="oldpass123",
+            otp="1234567",
+            refresh_token="token123",
+        )
+
+    def test_password_change_success(self):
+        payload = {
+            "password": "newpass123",
+            "otp": "1234567",
+            "uuidb64": self.user.id,
+            "refresh_token": "token123",
+        }
+        response = self.client.post(
+            "/api/v1/user/password-change/", payload, format="multipart"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("newpass123"))
+        self.assertIsNone(self.user.otp)
+        self.assertIsNone(self.user.refresh_token)
+
+    def test_password_change_invalid_credentials(self):
+        payload = {
+            "password": "newpass123",
+            "otp": "bad-otp",
+            "uuidb64": self.user.id,
+            "refresh_token": "bad-token",
+        }
+        response = self.client.post(
+            "/api/v1/user/password-change/", payload, format="multipart"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class CartAPITest(APITestCase):
+    def setUp(self):
+        self.teacher_user = User.objects.create_user(
+            username="teachercart",
+            email="teachercart@example.com",
+            password="testpass123",
+        )
+        self.teacher = Teacher.objects.create(
+            user=self.teacher_user,
+            full_name="Teacher Cart",
+        )
+        self.user = User.objects.create_user(
+            username="studentcart",
+            email="studentcart@example.com",
+            password="testpass123",
+        )
+        self.course = Course.objects.create(
+            teacher=self.teacher,
+            title="Cart Course",
+            description="Cart description",
+            price=100,
+            teacher_course_status="Published",
+        )
+        Country.objects.create(name="France", tax_rate=10, active=True)
+        self.cart_id = "test-cart-001"
+
+    def test_add_to_cart_and_list(self):
+        payload = {
+            "course_id": self.course.id,
+            "user_id": self.user.id,
+            "price": "100",
+            "country_name": "France",
+            "cart_id": self.cart_id,
+        }
+        create_res = self.client.post("/api/v1/course/cart/", payload, format="multipart")
+        self.assertEqual(create_res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(create_res.data["item"]["cart_id"], self.cart_id)
+
+        list_res = self.client.get(f"/api/v1/course/cart-list/{self.cart_id}/")
+        self.assertEqual(list_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(list_res.data), 1)
+        self.assertEqual(list_res.data[0]["course"]["id"], self.course.id)
+
+    def test_duplicate_add_to_cart_returns_existing_item(self):
+        payload = {
+            "course_id": self.course.id,
+            "user_id": self.user.id,
+            "price": "100",
+            "country_name": "France",
+            "cart_id": self.cart_id,
+        }
+        first_res = self.client.post("/api/v1/course/cart/", payload, format="multipart")
+        second_res = self.client.post("/api/v1/course/cart/", payload, format="multipart")
+        self.assertEqual(first_res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second_res.status_code, status.HTTP_200_OK)
+        self.assertIn("already in cart", second_res.data["message"].lower())
+
+
+class StudentSecurityAPITest(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="studentsec",
+            email="studentsec@example.com",
+            password="testpass123",
+        )
+        self.other_user = User.objects.create_user(
+            username="studentsec2",
+            email="studentsec2@example.com",
+            password="testpass123",
+        )
+
+    def test_student_summary_requires_auth(self):
+        response = self.client.get(f"/api/v1/student/summary/{self.user.id}/")
+        self.assertIn(
+            response.status_code,
+            [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN],
+        )
+
+    def test_student_summary_forbidden_on_other_user(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(f"/api/v1/student/summary/{self.other_user.id}/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

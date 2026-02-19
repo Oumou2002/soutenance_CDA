@@ -9,6 +9,7 @@ import Sidebar from "./Partials/Sidebar";
 import Header from "./Partials/Header";
 
 import useAxios from "../../utils/useAxios";
+import apiInstance from "../../utils/axios";
 import UserData from "../plugin/UserData";
 import Toast from "../plugin/Toast";
 import CartId from "../plugin/CartId";
@@ -48,6 +49,33 @@ function Wishlist() {
         });
     };
 
+    const addToCart = (courseId, userId, price, countryName, cartId) => {
+        const formdata = new FormData();
+        formdata.append("course_id", courseId);
+        formdata.append("user_id", userId);
+        formdata.append("price", price);
+        formdata.append("country_name", countryName);
+        formdata.append("cart_id", cartId);
+
+        useAxios
+            .post(`course/cart/`, formdata)
+            .then(() => {
+                apiInstance.get(`course/cart-list/${cartId}/`).then((res) => {
+                    setCartCount(res.data?.length ?? 0);
+                });
+                Toast().fire({
+                    icon: "success",
+                    title: "Added to cart",
+                });
+            })
+            .catch(() => {
+                Toast().fire({
+                    icon: "error",
+                    title: "Cart service is unavailable",
+                });
+            });
+    };
+
     return (
         <>
             <BaseHeader />
@@ -68,8 +96,8 @@ function Wishlist() {
                             <div className="row">
                                 <div className="col-md-12">
                                     <div className="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
-                                        {wishlist?.map((w, index) => (
-                                            <div className="col-lg-4">
+                                        {wishlist?.map((w) => (
+                                            <div className="col-lg-4" key={w.id}>
                                                 {/* Card */}
                                                 <div className="card card-hover">
                                                     <Link to={`/course-detail/${w.course.slug}/`}>
@@ -96,7 +124,7 @@ function Wishlist() {
                                                             </a>
                                                         </div>
                                                         <h4 className="mb-2 text-truncate-line-2 ">
-                                                            <Link to={`/course-detail/slug/`} className="text-inherit text-decoration-none text-dark fs-5">
+                                                            <Link to={`/course-detail/${w.course.slug}/`} className="text-inherit text-decoration-none text-dark fs-5">
                                                                 {w.course.title}
                                                             </Link>
                                                         </h4>
@@ -126,7 +154,7 @@ function Wishlist() {
                                                                 <button type="button" onClick={() => addToCart(w.course.id, UserData()?.user_id, w.course.price, country, CartId())} className="text-inherit text-decoration-none btn btn-primary me-2">
                                                                     <i className="fas fa-shopping-cart text-primary text-white" />
                                                                 </button>
-                                                                <Link to={""} className="text-inherit text-decoration-none btn btn-primary">
+                                                                <Link to={`/course-detail/${w.course.slug}/`} className="text-inherit text-decoration-none btn btn-primary">
                                                                     Enroll Now <i className="fas fa-arrow-right text-primary align-middle me-2 text-white" />
                                                                 </Link>
                                                             </div>

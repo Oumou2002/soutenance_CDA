@@ -1,103 +1,113 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import moment from "moment";
-
-import Modal from "react-bootstrap/Modal";
-import Button from "react-bootstrap/Button";
-
 import Sidebar from "./Partials/Sidebar";
 import Header from "./Partials/Header";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
-
 import useAxios from "../../utils/useAxios";
 import UserData from "../plugin/UserData";
 import Toast from "../plugin/Toast";
 
-function TeacherNotification() {
-    const [noti, setNoti] = useState([]);
+const typeLabelMap = {
+    New_Course: "Nouveau cours",
+    New_Review: "Nouvel avis",
+    New_Question: "Nouvelle question",
+};
 
-    const fetchNoti = () => {
+function TeacherNotification() {
+    const [notifications, setNotifications] = useState([]);
+
+    const fetchNotifications = () => {
         useAxios.get(`teacher/noti-list/${UserData()?.teacher_id}/`).then((res) => {
-            setNoti(res.data);
-            console.log(res.data);
+            setNotifications(res.data);
         });
     };
 
     useEffect(() => {
-        fetchNoti();
+        fetchNotifications();
     }, []);
 
-    const handleMarkAsSeen = (notiId) => {
+    const handleMarkAsSeen = async (notificationId) => {
         const formdata = new FormData();
-
         formdata.append("teacher", UserData()?.teacher_id);
-        formdata.append("pk", notiId);
+        formdata.append("pk", notificationId);
         formdata.append("seen", true);
 
-        useAxios.patch(`teacher/noti-detail/${UserData()?.teacher_id}/${notiId}`, formdata).then((res) => {
-            console.log(res.data);
-            fetchNoti();
+        try {
+            await useAxios.patch(`teacher/noti-detail/${UserData()?.teacher_id}/${notificationId}`, formdata);
+            fetchNotifications();
             Toast().fire({
                 icon: "success",
-                title: "Notication Seen",
+                title: "Notification marquee comme lue.",
             });
-        });
+        } catch (error) {
+            Toast().fire({
+                icon: "error",
+                title: "Impossible de mettre a jour la notification.",
+            });
+        }
     };
+
+    const getTypeLabel = (type) => typeLabelMap[type] || type || "Notification";
 
     return (
         <>
             <BaseHeader />
 
-            <section className="pt-5 pb-5">
+            <section className="workspace-shell">
                 <div className="container">
-                    {/* Header Here */}
                     <Header />
                     <div className="row mt-0 mt-md-4">
-                        {/* Sidebar Here */}
                         <Sidebar />
+
                         <div className="col-lg-9 col-md-8 col-12">
-                            {/* Card */}
-                            <div className="card mb-4">
-                                {/* Card header */}
-                                <div className="card-header d-lg-flex align-items-center justify-content-between">
-                                    <div className="mb-3 mb-lg-0">
-                                        <h3 className="mb-0">Notifications</h3>
-                                        <span>Manage all your notifications from here</span>
-                                    </div>
+                            <div className="workspace-title-row">
+                                <div>
+                                    <h2 className="workspace-title">
+                                        <i className="fas fa-bell"></i> Notifications
+                                    </h2>
+                                    <p className="workspace-subtitle">
+                                        Consultez les alertes importantes liees a votre activite formateur.
+                                    </p>
                                 </div>
-                                {/* Card body */}
-                                <div className="card-body">
-                                    {/* List group */}
+                            </div>
+
+                            <div className="workspace-panel">
+                                <div className="workspace-panel-head">
+                                    <h3>Centre de notifications</h3>
+                                    <p className="workspace-subtitle">
+                                        Marquez les alertes traitees pour garder une vue claire.
+                                    </p>
+                                </div>
+                                <div className="workspace-panel-body">
                                     <ul className="list-group list-group-flush">
-                                        {/* List group item */}
-                                        {noti?.map((n, index) => (
-                                            <li className="list-group-item p-4 shadow rounded-3 mb-3" key={index}>
-                                                <div className="d-flex">
-                                                    <div className="ms-3 mt-2">
-                                                        <div className="d-flex align-items-center justify-content-between">
-                                                            <div>
-                                                                <h4 className="mb-0">{n.type}</h4>
-                                                            </div>
-                                                        </div>
-                                                        <div className="mt-2">
-                                                            <p className="mt-1">
-                                                                <span className="me-2 fw-bold">
-                                                                    Date: <span className="fw-light">{moment(n.date).format("DD MMM, YYYY")}</span>
-                                                                </span>
-                                                            </p>
-                                                            <p>
-                                                                <button class="btn btn-outline-secondary" type="button" onClick={() => handleMarkAsSeen(n.id)}>
-                                                                    Mark as Seen <i className="fas fa-check"></i>
-                                                                </button>
-                                                            </p>
-                                                        </div>
+                                        {notifications?.map((notification) => (
+                                            <li
+                                                className="list-group-item p-3 shadow-sm rounded-3 mb-3"
+                                                key={notification.id}
+                                            >
+                                                <div className="d-flex justify-content-between flex-wrap gap-3 align-items-center">
+                                                    <div>
+                                                        <h4 className="mb-1">{getTypeLabel(notification.type)}</h4>
+                                                        <p className="mb-0 text-secondary">
+                                                            Date: {moment(notification.date).format("DD MMM YYYY")}
+                                                        </p>
                                                     </div>
+                                                    <button
+                                                        className="btn btn-outline-secondary"
+                                                        type="button"
+                                                        onClick={() => handleMarkAsSeen(notification.id)}
+                                                    >
+                                                        Marquer comme lue <i className="fas fa-check"></i>
+                                                    </button>
                                                 </div>
                                             </li>
                                         ))}
-
-                                        {noti?.length < 1 && <p>No notifications</p>}
                                     </ul>
+
+                                    {notifications?.length < 1 && (
+                                        <div className="workspace-empty mt-2">Aucune notification non lue.</div>
+                                    )}
                                 </div>
                             </div>
                         </div>

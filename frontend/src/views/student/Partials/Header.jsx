@@ -1,8 +1,9 @@
 import React, { useContext } from "react";
+import { Link } from "react-router-dom";
 import { ProfileContext } from "../../plugin/Context";
 
 function Header() {
-    const [profile, setProfile] = useContext(ProfileContext);
+    const [profile] = useContext(ProfileContext);
 
     return (
         <div className="row align-items-center">
@@ -15,7 +16,7 @@ function Header() {
                                     <img
                                         src={profile.image}
                                         className="avatar-xl rounded-circle border border-4 border-white"
-                                        alt="Profile image"
+                                        alt="Photo de profil"
                                         style={{
                                             width: "70px",
                                             height: "70px",
@@ -26,14 +27,14 @@ function Header() {
                                 </div>
                             )}
                             <div className="lh-1">
-                                <h2 className="mb-0"> {profile.full_name}</h2>
+                                <h2 className="mb-0">{profile.full_name}</h2>
                                 <p className="mb-0 d-block">{profile.about}</p>
                             </div>
                         </div>
                         <div>
-                            <a href="profile-edit.html" className="btn btn-primary btn-sm d-none d-md-block">
-                                Account Setting <i className="fas fa-gear fa-spin"></i>
-                            </a>
+                            <Link to="/student/profile/" className="btn btn-primary btn-sm d-none d-md-block">
+                                Parametres du compte <i className="fas fa-gear" />
+                            </Link>
                         </div>
                     </div>
                 </div>

@@ -137,14 +137,6 @@ function App() {
                                 }
                             />
                             <Route
-                                path="/instructor/dashboard/"
-                                element={
-                                    <PrivateRoute>
-                                        <Dashboard />
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
                                 path="/instructor/courses/"
                                 element={
                                     <PrivateRoute>

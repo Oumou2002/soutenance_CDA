@@ -18,6 +18,8 @@ function CourseEditCurriculum() {
     const [courseData, setCourseData] = useState({});
     const [imagePreview, setImagePreview] = useState("");
     const [category, setCategory] = useState([]);
+    const [, setLoading] = useState(false);
+    const [, setFileLoading] = useState(false);
     const navigate = useNavigate();
     const param = useParams();
 
@@ -82,7 +84,7 @@ function CourseEditCurriculum() {
             }
         } catch (error) {
             console.error("Error uploading course intro:", error);
-            setLoading(false);
+            setFileLoading(false);
         }
     };
 

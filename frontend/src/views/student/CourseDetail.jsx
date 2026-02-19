@@ -31,7 +31,7 @@ function CourseDetail() {
 
     const param = useParams();
     const lastElementRef = useRef();
-    // Play Lecture Modal
+    // Play Lecon Modal
     const [show, setShow] = useState(false);
     const handleClose = () => setShow(false);
     const handleShow = (variant_item) => {
@@ -88,7 +88,7 @@ function CourseDetail() {
             fetchCourseDetail();
             setMarkAsCompletedStatus({
                 ...markAsCompletedStatus,
-                [key]: "Updated",
+                [key]: "Mise a jour",
             });
         });
     };
@@ -115,7 +115,7 @@ function CourseDetail() {
                 handleNoteClose();
                 Toast().fire({
                     icon: "success",
-                    title: "Note created",
+                    title: "Note creee",
                 });
             });
         } catch (error) {
@@ -136,7 +136,7 @@ function CourseDetail() {
             fetchCourseDetail();
             Toast().fire({
                 icon: "success",
-                title: "Note updated",
+                title: "Note mise a jour",
             });
         });
     };
@@ -146,7 +146,7 @@ function CourseDetail() {
             fetchCourseDetail();
             Toast().fire({
                 icon: "success",
-                title: "Note deleted",
+                title: "Note supprimee",
             });
         });
     };
@@ -172,7 +172,7 @@ function CourseDetail() {
             handleQuestionClose();
             Toast().fire({
                 icon: "success",
-                title: "Question sent",
+                title: "Question envoyee",
             });
         });
     };
@@ -229,7 +229,7 @@ function CourseDetail() {
             fetchCourseDetail();
             Toast().fire({
                 icon: "success",
-                title: "Review created",
+                title: "Avis cree",
             });
         });
     };
@@ -248,7 +248,7 @@ function CourseDetail() {
             fetchCourseDetail();
             Toast().fire({
                 icon: "success",
-                title: "Review updated",
+                title: "Avis mis a jour",
             });
         });
     };
@@ -282,7 +282,7 @@ function CourseDetail() {
                                                         {/* Tab item */}
                                                         <li className="nav-item me-2 me-sm-4" role="presentation">
                                                             <button className="nav-link mb-2 mb-md-0 active" id="course-pills-tab-1" data-bs-toggle="pill" data-bs-target="#course-pills-1" type="button" role="tab" aria-controls="course-pills-1" aria-selected="true">
-                                                                Course Lectures
+                                                                Lecons du cours
                                                             </button>
                                                         </li>
                                                         {/* Tab item */}
@@ -300,7 +300,7 @@ function CourseDetail() {
 
                                                         <li className="nav-item me-2 me-sm-4" role="presentation">
                                                             <button className="nav-link mb-2 mb-md-0" id="course-pills-tab-4" data-bs-toggle="pill" data-bs-target="#course-pills-4" type="button" role="tab" aria-controls="course-pills-4" aria-selected="false">
-                                                                Leave a Review
+                                                                Laisser un avis
                                                             </button>
                                                         </li>
                                                     </ul>
@@ -342,7 +342,7 @@ function CourseDetail() {
                                                                             >
                                                                                 {c.title}
                                                                                 <span className="small ms-0 ms-sm-2">
-                                                                                    ({c.variant_items?.length} Lecture
+                                                                                    ({c.variant_items?.length} Lecon
                                                                                     {c.variant_items?.length > 1 && "s"})
                                                                                 </span>
                                                                             </button>
@@ -387,39 +387,39 @@ function CourseDetail() {
                                                             <div className="card">
                                                                 <div className="card-header border-bottom p-0 pb-3">
                                                                     <div className="d-sm-flex justify-content-between align-items-center">
-                                                                        <h4 className="mb-0 p-3">All Notes</h4>
-                                                                        {/* Add Note Modal */}
+                                                                        <h4 className="mb-0 p-3">Toutes les notes</h4>
+                                                                        {/* Ajouter une note Modal */}
                                                                         <button type="button" className="btn btn-primary me-3" data-bs-toggle="modal" data-bs-target="#exampleModal">
-                                                                            Add Note <i className="fas fa-pen"></i>
+                                                                            Ajouter une note <i className="fas fa-pen"></i>
                                                                         </button>
                                                                         <div className="modal fade" id="exampleModal" tabIndex={-1} aria-labelledby="exampleModalLabel" aria-hidden="true">
                                                                             <div className="modal-dialog modal-dialog-centered">
                                                                                 <div className="modal-content">
                                                                                     <div className="modal-header">
                                                                                         <h5 className="modal-title" id="exampleModalLabel">
-                                                                                            Add New Note <i className="fas fa-pen"></i>
+                                                                                            Ajouter une note <i className="fas fa-pen"></i>
                                                                                         </h5>
-                                                                                        <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
+                                                                                        <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Fermer" />
                                                                                     </div>
                                                                                     <div className="modal-body">
                                                                                         <form onSubmit={handleSubmitCreateNote}>
                                                                                             <div className="mb-3">
                                                                                                 <label htmlFor="exampleInputEmail1" className="form-label">
-                                                                                                    Note Title
+                                                                                                    Titre de la note
                                                                                                 </label>
                                                                                                 <input type="text" className="form-control" name="title" onChange={handleNoteChange} />
                                                                                             </div>
                                                                                             <div className="mb-3">
                                                                                                 <label htmlFor="exampleInputPassword1" className="form-label">
-                                                                                                    Note Content
+                                                                                                    Contenu de la note
                                                                                                 </label>
                                                                                                 <textarea className="form-control" id="" cols="30" rows="10" name="note" onChange={handleNoteChange}></textarea>
                                                                                             </div>
                                                                                             <button type="button" className="btn btn-secondary me-2" data-bs-dismiss="modal">
-                                                                                                <i className="fas fa-arrow-left"></i> Close
+                                                                                                <i className="fas fa-arrow-left"></i> Fermer
                                                                                             </button>
                                                                                             <button type="submit" className="btn btn-primary">
-                                                                                                Save Note <i className="fas fa-check-circle"></i>
+                                                                                                Enregistrer la note <i className="fas fa-check-circle"></i>
                                                                                             </button>
                                                                                         </form>
                                                                                     </div>
@@ -448,7 +448,7 @@ function CourseDetail() {
                                                                         </div>
                                                                     ))}
 
-                                                                    {course?.note?.length < 1 && <p className="mt-3 p-3">No notes</p>}
+                                                                    {course?.note?.length < 1 && <p className="mt-3 p-3">Aucune note</p>}
                                                                     <hr />
                                                                 </div>
                                                             </div>
@@ -463,7 +463,7 @@ function CourseDetail() {
                                                                         {/* Search */}
                                                                         <div className="col-sm-6 col-lg-9">
                                                                             <div className="position-relative">
-                                                                                <input className="form-control pe-5 bg-transparent" type="search" placeholder="Search" aria-label="Search" onChange={handleSearchQuestion} />
+                                                                                <input className="form-control pe-5 bg-transparent" type="search" placeholder="Rechercher" aria-label="Rechercher" onChange={handleSearchQuestion} />
                                                                                 <button className="bg-transparent p-2 position-absolute top-50 end-0 translate-middle-y border-0 text-primary-hover text-reset" type="submit">
                                                                                     <i className="fas fa-search fs-6 " />
                                                                                 </button>
@@ -471,7 +471,7 @@ function CourseDetail() {
                                                                         </div>
                                                                         <div className="col-sm-6 col-lg-3">
                                                                             <a onClick={handleQuestionShow} className="btn btn-primary mb-0 w-100" data-bs-toggle="modal" data-bs-target="#modalCreatePost">
-                                                                                Ask Question
+                                                                                Poser une question
                                                                             </a>
                                                                         </div>
                                                                     </form>
@@ -497,7 +497,7 @@ function CourseDetail() {
                                                                                 </div>
                                                                                 <h5>{q.title}</h5>
                                                                                 <button className="btn btn-primary btn-sm mb-3 mt-3" onClick={() => handleConversationShow(q)}>
-                                                                                    Join Conversation <i className="fas fa-arrow-right"></i>
+                                                                                    Ouvrir la conversation <i className="fas fa-arrow-right"></i>
                                                                                 </button>
                                                                             </div>
                                                                         ))}
@@ -510,7 +510,7 @@ function CourseDetail() {
                                                                 {/* Card header */}
                                                                 <div className="card-header border-bottom p-0 pb-3">
                                                                     {/* Title */}
-                                                                    <h4 className="mb-3 p-3">Leave a Review {studentReview?.rating}</h4>
+                                                                    <h4 className="mb-3 p-3">Laisser un avis {studentReview?.rating}</h4>
                                                                     <div className="mt-2">
                                                                         {!studentReview && (
                                                                             <form className="row g-3 p-3" onSubmit={handleCreateReviewSubmit}>
@@ -526,12 +526,12 @@ function CourseDetail() {
                                                                                 </div>
                                                                                 {/* Message */}
                                                                                 <div className="col-12 bg-light-input">
-                                                                                    <textarea className="form-control" id="exampleFormControlTextarea1" placeholder="Your review" rows={3} onChange={handleReviewChange} name="review" defaultValue={studentReview?.review || createReview?.review} />
+                                                                                    <textarea className="form-control" id="exampleFormControlTextarea1" placeholder="Votre avis" rows={3} onChange={handleReviewChange} name="review" defaultValue={studentReview?.review || createReview?.review} />
                                                                                 </div>
                                                                                 {/* Button */}
                                                                                 <div className="col-12">
                                                                                     <button type="submit" className="btn btn-primary mb-0">
-                                                                                        Post Review
+                                                                                        Publier l'avis
                                                                                     </button>
                                                                                 </div>
                                                                             </form>
@@ -551,12 +551,12 @@ function CourseDetail() {
                                                                                 </div>
                                                                                 {/* Message */}
                                                                                 <div className="col-12 bg-light-input">
-                                                                                    <textarea className="form-control" id="exampleFormControlTextarea1" placeholder="Your review" rows={3} onChange={handleReviewChange} name="review" defaultValue={studentReview?.review} />
+                                                                                    <textarea className="form-control" id="exampleFormControlTextarea1" placeholder="Votre avis" rows={3} onChange={handleReviewChange} name="review" defaultValue={studentReview?.review} />
                                                                                 </div>
                                                                                 {/* Button */}
                                                                                 <div className="col-12">
                                                                                     <button type="submit" className="btn btn-primary mb-0">
-                                                                                        Update Review
+                                                                                        Mettre a jour l'avis
                                                                                     </button>
                                                                                 </div>
                                                                             </form>
@@ -577,17 +577,17 @@ function CourseDetail() {
                 </div>
             </section>
 
-            {/* Lecture Modal */}
+            {/* Lecon Modal */}
             <Modal show={show} size="lg" onHide={handleClose}>
                 <Modal.Header closeButton>
-                    <Modal.Title>Lesson: {variantItem?.title}</Modal.Title>
+                    <Modal.Title>Lecon : {variantItem?.title}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     <ReactPlayer url={variantItem?.file} controls width={"100%"} height={"100%"} />
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="secondary" onClick={handleClose}>
-                        Close
+                        Fermer
                     </Button>
                 </Modal.Footer>
             </Modal>
@@ -595,27 +595,27 @@ function CourseDetail() {
             {/* Note Edit Modal */}
             <Modal show={noteShow} size="lg" onHide={handleNoteClose}>
                 <Modal.Header closeButton>
-                    <Modal.Title>Note: {selectedNote?.title}</Modal.Title>
+                    <Modal.Title>Note : {selectedNote?.title}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     <form onSubmit={(e) => handleSubmitEditNote(e, selectedNote?.id)}>
                         <div className="mb-3">
                             <label htmlFor="exampleInputEmail1" className="form-label">
-                                Note Title
+                                Titre de la note
                             </label>
                             <input defaultValue={selectedNote?.title} name="title" onChange={handleNoteChange} type="text" className="form-control" />
                         </div>
                         <div className="mb-3">
                             <label htmlFor="exampleInputPassword1" className="form-label">
-                                Note Content
+                                Contenu de la note
                             </label>
                             <textarea defaultValue={selectedNote?.note} name="note" onChange={handleNoteChange} className="form-control" cols="30" rows="10"></textarea>
                         </div>
                         <button type="button" className="btn btn-secondary me-2" onClick={handleNoteClose}>
-                            <i className="fas fa-arrow-left"></i> Close
+                            <i className="fas fa-arrow-left"></i> Fermer
                         </button>
                         <button type="submit" className="btn btn-primary">
-                            Save Note <i className="fas fa-check-circle"></i>
+                            Enregistrer la note <i className="fas fa-check-circle"></i>
                         </button>
                     </form>
                 </Modal.Body>
@@ -624,7 +624,7 @@ function CourseDetail() {
             {/* Conversation Modal */}
             <Modal show={ConversationShow} size="lg" onHide={handleConversationClose}>
                 <Modal.Header closeButton>
-                    <Modal.Title>Lesson: {selectedConversation?.title}</Modal.Title>
+                    <Modal.Title>Lecon : {selectedConversation?.title}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     <div className="border p-2 p-sm-4 rounded-3">
@@ -657,10 +657,10 @@ function CourseDetail() {
                             <div ref={lastElementRef}></div>
                         </ul>
 
-                        <form class="w-100 d-flex" onSubmit={sendNewMessage}>
-                            <textarea name="message" class="one form-control pe-4 bg-light w-75" id="autoheighttextarea" rows="2" onChange={handleMessageChange} placeholder="What's your question?"></textarea>
-                            <button class="btn btn-primary ms-2 mb-0 w-25" type="submit">
-                                Post <i className="fas fa-paper-plane"></i>
+                        <form className="w-100 d-flex" onSubmit={sendNewMessage}>
+                            <textarea name="message" className="one form-control pe-4 bg-light w-75" id="autoheighttextarea" rows="2" onChange={handleMessageChange} placeholder="Ecrivez votre message..."></textarea>
+                            <button className="btn btn-primary ms-2 mb-0 w-25" type="submit">
+                                Envoyer <i className="fas fa-paper-plane"></i>
                             </button>
                         </form>
 
@@ -669,31 +669,31 @@ function CourseDetail() {
                 </Modal.Body>
             </Modal>
 
-            {/* Ask Question Modal */}
+            {/* Poser une question Modal */}
             {/* Note Edit Modal */}
             <Modal show={addQuestionShow} size="lg" onHide={handleQuestionClose}>
                 <Modal.Header closeButton>
-                    <Modal.Title>Ask Question</Modal.Title>
+                    <Modal.Title>Poser une question</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     <form onSubmit={handleSaveQuestion}>
                         <div className="mb-3">
                             <label htmlFor="exampleInputEmail1" className="form-label">
-                                Question Title
+                                Titre de la question
                             </label>
                             <input value={createMessage.title} name="title" onChange={handleMessageChange} type="text" className="form-control" />
                         </div>
                         <div className="mb-3">
                             <label htmlFor="exampleInputPassword1" className="form-label">
-                                Question Message
+                                Message de la question
                             </label>
                             <textarea value={createMessage.message} name="message" onChange={handleMessageChange} className="form-control" cols="30" rows="10"></textarea>
                         </div>
                         <button type="button" className="btn btn-secondary me-2" onClick={handleQuestionClose}>
-                            <i className="fas fa-arrow-left"></i> Close
+                            <i className="fas fa-arrow-left"></i> Fermer
                         </button>
                         <button type="submit" className="btn btn-primary">
-                            Send Message <i className="fas fa-check-circle"></i>
+                            Envoyer le message <i className="fas fa-check-circle"></i>
                         </button>
                     </form>
                 </Modal.Body>
@@ -705,3 +705,4 @@ function CourseDetail() {
 }
 
 export default CourseDetail;
+

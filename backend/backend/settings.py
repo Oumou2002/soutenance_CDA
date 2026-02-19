@@ -17,6 +17,8 @@ from environs import Env
 env = Env()
 env.read_env()
 
+FRONTEND_URL = env.str("FRONTEND_URL", "http://localhost:5190")
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -174,5 +176,6 @@ SIMPLE_JWT = {
 }
 #CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Vite dev server
+    FRONTEND_URL,
+    FRONTEND_URL.replace("localhost", "127.0.0.1"),
 ]

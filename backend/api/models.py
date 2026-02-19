@@ -51,6 +51,12 @@ NOTI_TYPE = (
     ("Course Enrollment Completed", "Course Enrollment Completed"),
 )
 
+ORDER_STATUS = (
+    ("Pending", "Pending"),
+    ("Paid", "Paid"),
+    ("Failed", "Failed"),
+)
+
 
 class Teacher(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -352,6 +358,70 @@ class Wishlist(models.Model):
 
     def __str__(self):
         return str(self.course.title)
+
+
+class CartOrder(models.Model):
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    oid = ShortUUIDField(
+        unique=True, length=8, max_length=20, alphabet="1234567890abcdef"
+    )
+    payment_status = models.CharField(
+        max_length=20, choices=ORDER_STATUS, default="Pending"
+    )
+    sub_total = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0.00, blank=True, null=True
+    )
+    tax_fee = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0.00, blank=True, null=True
+    )
+    total = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0.00, blank=True, null=True
+    )
+    date = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"Order {self.oid}"
+
+
+class CartOrderItem(models.Model):
+    order = models.ForeignKey(
+        CartOrder, on_delete=models.SET_NULL, null=True, blank=True, related_name="items"
+    )
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    teacher = models.ForeignKey(
+        Teacher, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    price = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0.00, blank=True, null=True
+    )
+    tax_fee = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0.00, blank=True, null=True
+    )
+    total = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0.00, blank=True, null=True
+    )
+    country = models.CharField(max_length=100, null=True, blank=True)
+    cart_id = models.CharField(max_length=100, db_index=True)
+    date = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"{self.course.title} ({self.cart_id})"
+
+
+class Certificate(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    enrollment = models.ForeignKey(
+        EnrolledCourse, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    certificate_id = ShortUUIDField(
+        unique=True, length=8, max_length=20, alphabet="1234567890abcdef"
+    )
+    date = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"Certificate {self.certificate_id}"
 
 
 class Country(models.Model):

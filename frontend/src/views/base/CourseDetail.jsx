@@ -1,7 +1,5 @@
 import { useState, useEffect, useContext } from "react";
-import { Link } from "react-router-dom";
 import moment from "moment";
-import Swal from "sweetalert2";
 
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
@@ -17,7 +15,7 @@ import apiInstance from "../../utils/axios";
 function CourseDetail() {
     const [course, setCourse] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [addToCartBtn, setAddToCartBtn] = useState("Add To Cart");
+    const [addToCartBtn, setAddToCartBtn] = useState("AJOUTER_AU_PANIER");
     const [cartCount, setCartCount] = useContext(CartContext);
 
     const param = useParams();
@@ -28,7 +26,7 @@ function CourseDetail() {
     const fetchCourse = async () => {
         await useAxios.get(`course/course-detail/${param.slug}/`).then((res) => {
             setCourse(res.data);
-            setIsLoading();
+            setIsLoading(false);
         });
     };
 
@@ -37,7 +35,7 @@ function CourseDetail() {
     }, []);
 
     const addToCart = async (courseId, userId, price, country, cartId) => {
-        setAddToCartBtn("Adding To Cart");
+        setAddToCartBtn("AJOUT_EN_COURS");
         const formdata = new FormData();
 
         formdata.append("course_id", courseId);
@@ -49,9 +47,9 @@ function CourseDetail() {
         try {
             await useAxios.post(`course/cart/`, formdata).then((res) => {
                 console.log(res.data);
-                setAddToCartBtn("Added To Cart");
+                setAddToCartBtn("AJOUTE_AU_PANIER");
                 Toast().fire({
-                    title: "Added To Cart",
+                    title: "Ajoute au panier",
                     icon: "success",
                 });
 
@@ -62,7 +60,7 @@ function CourseDetail() {
             });
         } catch (error) {
             console.log(error);
-            setAddToCartBtn("Add To Cart");
+            setAddToCartBtn("AJOUTER_AU_PANIER");
         }
     };
 
@@ -73,7 +71,7 @@ function CourseDetail() {
             <>
                 {isLoading === true ? (
                     <p>
-                        Loading <i className="fas fa-spinner fa-spin"></i>
+                        Chargement <i className="fas fa-spinner fa-spin"></i>
                     </p>
                 ) : (
                     <>
@@ -99,7 +97,7 @@ function CourseDetail() {
                                             </li>
                                             <li className="list-inline-item h6 me-3 mb-1 mb-sm-0">
                                                 <i className="fas fa-user-graduate text-orange me-2" />
-                                                {course.students?.length} Enrolled
+                                                {course.students?.length} inscrits
                                             </li>
                                             <li className="list-inline-item h6 me-3 mb-1 mb-sm-0">
                                                 <i className="fas fa-signal text-success me-2" />
@@ -130,25 +128,25 @@ function CourseDetail() {
                                                     {/* Tab item */}
                                                     <li className="nav-item me-2 me-sm-4" role="presentation">
                                                         <button className="nav-link mb-2 mb-md-0 active" id="course-pills-tab-1" data-bs-toggle="pill" data-bs-target="#course-pills-1" type="button" role="tab" aria-controls="course-pills-1" aria-selected="true">
-                                                            Overview
+                                                            Vue d'ensemble
                                                         </button>
                                                     </li>
                                                     {/* Tab item */}
                                                     <li className="nav-item me-2 me-sm-4" role="presentation">
                                                         <button className="nav-link mb-2 mb-md-0" id="course-pills-tab-2" data-bs-toggle="pill" data-bs-target="#course-pills-2" type="button" role="tab" aria-controls="course-pills-2" aria-selected="false">
-                                                            Curriculum
+                                                            Programme
                                                         </button>
                                                     </li>
                                                     {/* Tab item */}
                                                     <li className="nav-item me-2 me-sm-4" role="presentation">
                                                         <button className="nav-link mb-2 mb-md-0" id="course-pills-tab-3" data-bs-toggle="pill" data-bs-target="#course-pills-3" type="button" role="tab" aria-controls="course-pills-3" aria-selected="false">
-                                                            Instructor
+                                                            Formateur
                                                         </button>
                                                     </li>
                                                     {/* Tab item */}
                                                     <li className="nav-item me-2 me-sm-4" role="presentation">
                                                         <button className="nav-link mb-2 mb-md-0" id="course-pills-tab-4" data-bs-toggle="pill" data-bs-target="#course-pills-4" type="button" role="tab" aria-controls="course-pills-4" aria-selected="false">
-                                                            Reviews
+                                                            Avis
                                                         </button>
                                                     </li>
                                                     {/* Tab item */}
@@ -171,7 +169,7 @@ function CourseDetail() {
                                                 <div className="tab-content pt-2" id="course-pills-tabContent">
                                                     {/* Content START */}
                                                     <div className="tab-pane fade show active" id="course-pills-1" role="tabpanel" aria-labelledby="course-pills-tab-1">
-                                                        <h5 className="mb-3">Course Description</h5>
+                                                        <h5 className="mb-3">Description du cours</h5>
                                                         <p
                                                             className="mb-3"
                                                             dangerouslySetInnerHTML={{
@@ -264,14 +262,14 @@ function CourseDetail() {
                                                             </div>
                                                         </div>
                                                         {/* Card END */}
-                                                        {/* Instructor info */}
-                                                        <h5 className="mb-3">About Instructor</h5>
+                                                        {/* Infos formateur */}
+                                                        <h5 className="mb-3">A propos du formateur</h5>
                                                         <p className="mb-3">{course.teacher.about}</p>
                                                     </div>
                                                     <div className="tab-pane fade" id="course-pills-4" role="tabpanel" aria-labelledby="course-pills-tab-4">
                                                         {/* Review START */}
                                                         <div className="row mb-1">
-                                                            <h5 className="mb-4">Our Student Reviews</h5>
+                                                            <h5 className="mb-4">Avis des etudiants</h5>
                                                         </div>
 
                                                         <div className="row">
@@ -294,7 +292,7 @@ function CourseDetail() {
                                                     </div>
                                                     <div className="tab-pane fade" id="course-pills-5" role="tabpanel" aria-labelledby="course-pills-tab-5">
                                                         {/* Title */}
-                                                        <h5 className="mb-3">Frequently Asked Questions</h5>
+                                                        <h5 className="mb-3">Questions frequentes</h5>
                                                         {/* Accordion START */}
                                                         <div className="accordion accordion-flush" id="accordionExample">
                                                             {/* Item */}
@@ -421,7 +419,7 @@ function CourseDetail() {
                                                                                     <ul className="nav nav-divider py-2 small">
                                                                                         <li className="nav-item">
                                                                                             <a className="btn btn-primary btn-sm" href="#">
-                                                                                                Join Conversation <i className="fas fa-arrow-right"></i>
+                                                                                                Ouvrir la conversation <i className="fas fa-arrow-right"></i>
                                                                                             </a>
                                                                                         </li>
                                                                                     </ul>
@@ -451,7 +449,7 @@ function CourseDetail() {
                                                                                     <ul className="nav nav-divider py-2 small">
                                                                                         <li className="nav-item">
                                                                                             <a className="btn btn-primary btn-sm" href="#">
-                                                                                                Join Conversation <i className="fas fa-arrow-right"></i>
+                                                                                                Ouvrir la conversation <i className="fas fa-arrow-right"></i>
                                                                                             </a>
                                                                                         </li>
                                                                                     </ul>
@@ -484,26 +482,26 @@ function CourseDetail() {
                                                                         <i className="fas fa-play" />
                                                                     </a>
                                                                     <span data-bs-toggle="modal" data-bs-target="#exampleModal" className="fw-bold">
-                                                                        Course Introduction Video
+                                                                        Video d'introduction du cours
                                                                     </span>
                                                                     <div className="modal fade" id="exampleModal" tabIndex={-1} aria-labelledby="exampleModalLabel" aria-hidden="true">
                                                                         <div className="modal-dialog">
                                                                             <div className="modal-content">
                                                                                 <div className="modal-header">
                                                                                     <h1 className="modal-title fs-5" id="exampleModalLabel">
-                                                                                        Introduction Videos
+                                                                                        Video d'introduction
                                                                                     </h1>
-                                                                                    <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
+                                                                                    <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Fermer" />
                                                                                 </div>
                                                                                 <div className="modal-body">
                                                                                     <video src={course?.file || ""} width="100" className="w-100 rounded-3" height="240" controls />
                                                                                 </div>
                                                                                 <div className="modal-footer">
                                                                                     <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">
-                                                                                        Close
+                                                                                        Fermer
                                                                                     </button>
                                                                                     <button type="button" className="btn btn-primary">
-                                                                                        Save changes
+                                                                                        Enregistrer
                                                                                     </button>
                                                                                 </div>
                                                                             </div>
@@ -534,7 +532,7 @@ function CourseDetail() {
                                                                     <li>
                                                                         <a className="dropdown-item" href="#">
                                                                             <i className="fab fa-twitter-square me-2" />
-                                                                            Twitter
+                                                                            X (Twitter)
                                                                         </a>
                                                                     </li>
                                                                     <li>
@@ -552,7 +550,7 @@ function CourseDetail() {
                                                                     <li>
                                                                         <a className="dropdown-item" href="#">
                                                                             <i className="fas fa-copy me-2" />
-                                                                            Copy link
+                                                                            Copier le lien
                                                                         </a>
                                                                     </li>
                                                                 </ul>
@@ -560,21 +558,21 @@ function CourseDetail() {
                                                         </div>
                                                         {/* Buttons */}
                                                         <div className="mt-3 d-sm-flex justify-content-sm-between ">
-                                                            {addToCartBtn === "Add To Cart" && (
+                                                            {addToCartBtn === "AJOUTER_AU_PANIER" && (
                                                                 <button type="button" className="btn btn-primary mb-0 w-100 me-2 mt-3" onClick={() => addToCart(course?.id, userId, course.price, country, CartId())}>
-                                                                    <i className="fas fa-shopping-cart"></i> Add To Cart
+                                                                    <i className="fas fa-shopping-cart"></i> Ajouter au panier
                                                                 </button>
                                                             )}
 
-                                                            {addToCartBtn === "Added To Cart" && (
-                                                                <button type="button" className="btn btn-primary mb-0 w-100 me-2 mt-3" onClick={() => addToCart(course.id, 1, course.price, "Nigeria", "8325347")}>
-                                                                    <i className="fas fa-check-circle"></i> Added To Cart
+                                                            {addToCartBtn === "AJOUTE_AU_PANIER" && (
+                                                                <button type="button" className="btn btn-primary mb-0 w-100 me-2 mt-3" onClick={() => addToCart(course?.id, userId, course.price, country, CartId())}>
+                                                                    <i className="fas fa-check-circle"></i> Ajoute au panier
                                                                 </button>
                                                             )}
 
-                                                            {addToCartBtn === "Adding To Cart" && (
-                                                                <button type="button" className="btn btn-primary mb-0 w-100 me-2 mt-3" onClick={() => addToCart(course.id, 1, course.price, "Nigeria", "8325347")}>
-                                                                    <i className="fas fa-spinner fa-spin"></i> Adding To Cart
+                                                            {addToCartBtn === "AJOUT_EN_COURS" && (
+                                                                <button type="button" className="btn btn-primary mb-0 w-100 me-2 mt-3" onClick={() => addToCart(course?.id, userId, course.price, country, CartId())}>
+                                                                    <i className="fas fa-spinner fa-spin"></i> Ajout en cours
                                                                 </button>
                                                             )}
                                                         </div>
@@ -584,42 +582,42 @@ function CourseDetail() {
                                                 {/* Course info START */}
                                                 <div className="card card-body shadow p-4 mb-4">
                                                     {/* Title */}
-                                                    <h4 className="mb-3">This course includes</h4>
+                                                    <h4 className="mb-3">Ce cours comprend</h4>
                                                     <ul className="list-group list-group-borderless">
                                                         <li className="list-group-item d-flex justify-content-between align-items-center">
                                                             <span className="h6 fw-light mb-0">
                                                                 <i className="fas fa-fw fa-book-open text-primary me-2" />
-                                                                Lectures
+                                                                Lecons
                                                             </span>
                                                             <span>30</span>
                                                         </li>
                                                         <li className="list-group-item d-flex justify-content-between align-items-center d-none">
                                                             <span className="h6 fw-light mb-0">
                                                                 <i className="fas fa-fw fa-clock text-primary me-2" />
-                                                                Duration
+                                                                Duree
                                                             </span>
                                                             <span>4h 50m</span>
                                                         </li>
                                                         <li className="list-group-item d-flex justify-content-between align-items-center">
                                                             <span className="h6 fw-light mb-0">
                                                                 <i className="fas fa-fw fa-signal text-primary me-2" />
-                                                                Skills
+                                                                Niveau
                                                             </span>
-                                                            <span>Beginner</span>
+                                                            <span>Debutant</span>
                                                         </li>
                                                         <li className="list-group-item d-flex justify-content-between align-items-center">
                                                             <span className="h6 fw-light mb-0">
                                                                 <i className="fas fa-fw fa-globe text-primary me-2" />
-                                                                Language
+                                                                Langue
                                                             </span>
-                                                            <span>English</span>
+                                                            <span>Francais</span>
                                                         </li>
                                                         <li className="list-group-item d-flex justify-content-between align-items-center">
                                                             <span className="h6 fw-light mb-0">
                                                                 <i className="fas fa-fw fa-user-clock text-primary me-2" />
-                                                                Published
+                                                                Publie
                                                             </span>
-                                                            <span>7th August, 2025</span>
+                                                            <span>7 aout 2025</span>
                                                         </li>
                                                     </ul>
                                                 </div>

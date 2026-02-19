@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.conf import settings
@@ -17,7 +18,8 @@ from rest_framework import generics, status, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, APIView
+from rest_framework.decorators import api_view, APIView, permission_classes
+from rest_framework.exceptions import PermissionDenied
 
 
 import random
@@ -37,6 +39,23 @@ import math
 from rest_framework.parsers import MultiPartParser, FormParser
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from moviepy import VideoFileClip
+
+
+def ensure_user_scope(request, user_id):
+    try:
+        scoped_user_id = int(user_id)
+    except (TypeError, ValueError):
+        raise PermissionDenied("Invalid user scope.")
+    if request.user.id != scoped_user_id:
+        raise PermissionDenied("You can only access your own resources.")
+
+
+def ensure_teacher_scope(request, teacher_id):
+    teacher = get_object_or_404(api_models.Teacher, id=teacher_id)
+    if teacher.user_id != request.user.id:
+        raise PermissionDenied("You can only access your own teacher resources.")
+    return teacher
 
 
 # Create your views here.
@@ -52,7 +71,7 @@ class RegisterView(generics.CreateAPIView):
 
 class ChangePasswordAPIView(generics.CreateAPIView):
     serializer_class = api_serializer.UserSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
         user_id = request.data["user_id"]
@@ -60,19 +79,62 @@ class ChangePasswordAPIView(generics.CreateAPIView):
         new_password = request.data["new_password"]
 
         user = User.objects.get(id=user_id)
-        if user is not None:
-            if check_password(old_password, user.password):
-                user.set_password(new_password)
-                user.save()
-                return Response(
-                    {"message": "Password changed successfully", "icon": "success"}
-                )
-            else:
-                return Response(
-                    {"message": "Old password is incorrect", "icon": "warning"}
-                )
-        else:
-            return Response({"message": "User does not exists", "icon": "error"})
+        if request.user.id != user.id:
+            return Response(
+                {"message": "Requete de changement de mot de passe non autorisee.", "icon": "error"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if check_password(old_password, user.password):
+            user.set_password(new_password)
+            user.save()
+            return Response({"message": "Mot de passe modifie avec succes.", "icon": "success"})
+        return Response({"message": "Ancien mot de passe incorrect.", "icon": "warning"})
+
+
+class PasswordChangeAPIView(generics.CreateAPIView):
+    permission_classes = [AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        password = request.data.get("password")
+        otp = request.data.get("otp")
+        uuidb64 = request.data.get("uuidb64")
+        refresh_token = request.data.get("refresh_token")
+
+        if not all([password, otp, uuidb64, refresh_token]):
+            return Response(
+                {"message": "Champs requis manquants.", "icon": "error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = User.objects.filter(id=uuidb64, otp=otp, refresh_token=refresh_token).first()
+        if not user:
+            return Response(
+                {"message": "Informations de reinitialisation invalides.", "icon": "error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(password)
+        user.otp = None
+        user.refresh_token = None
+        user.save()
+
+        return Response(
+            {"message": "Mot de passe reinitialise avec succes. Connectez-vous.", "icon": "success"},
+            status=status.HTTP_200_OK,
+        )
+
+
+class ProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
+    serializer_class = api_serializer.ProfileSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
+
+    def get_object(self):
+        user_id = self.kwargs["user_id"]
+        if self.request.user.id != int(user_id):
+            raise PermissionDenied("You can only access your own profile.")
+        return get_object_or_404(Profile, user_id=user_id)
 
 
 class PasswordResetEmailVerifyAPIView(generics.RetrieveAPIView):
@@ -87,13 +149,14 @@ class PasswordResetEmailVerifyAPIView(generics.RetrieveAPIView):
         if user:
             uuidb64 = user.pk
             refresh = RefreshToken.for_user(user)
-            refresh_token = str(refresh.access_token)
+            refresh_token = str(refresh)
 
             user.refresh_token = refresh_token
             user.otp = generate_random_otp()
             user.save()
 
-            link = f"http://localhost:5173/create-new-password/?otp={user.otp}&uuidb64={uuidb64}&refresh_token={refresh_token}"
+            frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:5190")
+            link = f"{frontend_url}/create-new-password/?otp={user.otp}&uuidb64={uuidb64}&refresh_token={refresh_token}"
 
             # context = {"link": link, "username": user.username}
 
@@ -139,18 +202,14 @@ class CourseListAPIView(generics.ListAPIView):
 
 class TeacherCourseDetailAPIView(generics.RetrieveAPIView):
     serializer_class = api_serializer.CourseSerializer
-    permission_classes = [AllowAny]
-    queryset = api_models.Course.objects.filter(
-        platform_status="Published", teacher_course_status="Published"
-    )
+    permission_classes = [IsAuthenticated]
+    queryset = api_models.Course.objects.all()
 
     def get_object(self):
         course_id = self.kwargs["course_id"]
-        course = api_models.Course.objects.get(
-            course_id=course_id,
-            platform_status="Published",
-            teacher_course_status="Published",
-        )
+        course = api_models.Course.objects.get(course_id=course_id)
+        if not course.teacher or course.teacher.user_id != self.request.user.id:
+            raise PermissionDenied("You can only access your own course.")
         return course
 
 
@@ -183,12 +242,90 @@ class SearchCourseAPIView(generics.ListAPIView):
         )
 
 
-class StudentSummaryAPIView(generics.ListAPIView):
-    serializer_class = api_serializer.StudentSummarySerializer
+class CartCreateAPIView(generics.CreateAPIView):
+    serializer_class = api_serializer.CartOrderItemSerializer
+    permission_classes = [AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        course_id = request.data.get("course_id")
+        cart_id = request.data.get("cart_id")
+        user_id = request.data.get("user_id")
+        country_name = request.data.get("country_name")
+        price_input = request.data.get("price")
+
+        if not course_id or not cart_id:
+            return Response(
+                {"message": "course_id and cart_id are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        course = get_object_or_404(api_models.Course, id=course_id)
+
+        existing_item = api_models.CartOrderItem.objects.filter(
+            cart_id=cart_id, course=course, order__isnull=True
+        ).first()
+        if existing_item:
+            serializer = self.get_serializer(existing_item)
+            return Response(
+                {"message": "Course already in cart", "item": serializer.data},
+                status=status.HTTP_200_OK,
+            )
+
+        user = None
+        if str(user_id).isdigit() and int(user_id) > 0:
+            user = User.objects.filter(id=int(user_id)).first()
+
+        try:
+            price = Decimal(str(price_input if price_input is not None else course.price or 0))
+        except Exception:
+            price = Decimal("0.00")
+
+        tax_rate = 0
+        if country_name:
+            country = api_models.Country.objects.filter(
+                name__iexact=country_name, active=True
+            ).first()
+            if country:
+                tax_rate = country.tax_rate
+
+        tax_fee = (price * Decimal(tax_rate)) / Decimal("100")
+        total = price + tax_fee
+
+        cart_item = api_models.CartOrderItem.objects.create(
+            user=user,
+            teacher=course.teacher,
+            course=course,
+            price=price,
+            tax_fee=tax_fee,
+            total=total,
+            country=country_name or "",
+            cart_id=cart_id,
+        )
+        serializer = self.get_serializer(cart_item)
+        return Response(
+            {"message": "Course added to cart", "item": serializer.data},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class CartListAPIView(generics.ListAPIView):
+    serializer_class = api_serializer.CartOrderItemSerializer
     permission_classes = [AllowAny]
 
     def get_queryset(self):
+        cart_id = self.kwargs["cart_id"]
+        return api_models.CartOrderItem.objects.filter(
+            cart_id=cart_id, order__isnull=True
+        ).order_by("-date")
+
+
+class StudentSummaryAPIView(generics.ListAPIView):
+    serializer_class = api_serializer.StudentSummarySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
         user_id = self.kwargs["user_id"]
+        ensure_user_scope(self.request, user_id)
         user = User.objects.get(id=user_id)
 
         total_courses = api_models.EnrolledCourse.objects.filter(user=user).count()
@@ -211,22 +348,24 @@ class StudentSummaryAPIView(generics.ListAPIView):
 
 class StudentCourseListAPIView(generics.ListAPIView):
     serializer_class = api_serializer.EnrolledCourseSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user_id = self.kwargs["user_id"]
+        ensure_user_scope(self.request, user_id)
         user = User.objects.get(id=user_id)
         return api_models.EnrolledCourse.objects.filter(user=user)
 
 
 class StudentCourseDetailAPIView(generics.RetrieveAPIView):
     serializer_class = api_serializer.EnrolledCourseSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     lookup_field = "enrollment_id"
 
     def get_object(self):
         user_id = self.kwargs["user_id"]
         enrollment_id = self.kwargs["enrollment_id"]
+        ensure_user_scope(self.request, user_id)
 
         user = User.objects.get(id=user_id)
         return api_models.EnrolledCourse.objects.get(
@@ -236,18 +375,27 @@ class StudentCourseDetailAPIView(generics.RetrieveAPIView):
 
 class StudentCourseCompletedCreateAPIView(generics.CreateAPIView):
     serializer_class = api_serializer.CompletedLessonSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
         user_id = request.data["user_id"]
         course_id = request.data["course_id"]
         variant_item_id = request.data["variant_item_id"]
+        ensure_user_scope(request, user_id)
 
         user = User.objects.get(id=user_id)
         course = api_models.Course.objects.get(id=course_id)
         variant_item = api_models.VariantItem.objects.get(
             variant_item_id=variant_item_id
         )
+        is_enrolled = api_models.EnrolledCourse.objects.filter(
+            user=user, course=course
+        ).exists()
+        if not is_enrolled:
+            return Response(
+                {"message": "You are not enrolled in this course"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         completed_lessons = api_models.CompletedLesson.objects.filter(
             user=user, course=course, variant_item=variant_item
@@ -266,14 +414,17 @@ class StudentCourseCompletedCreateAPIView(generics.CreateAPIView):
 
 class StudentNoteCreateAPIView(generics.ListCreateAPIView):
     serializer_class = api_serializer.NoteSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user_id = self.kwargs["user_id"]
         enrollment_id = self.kwargs["enrollment_id"]
+        ensure_user_scope(self.request, user_id)
 
         user = User.objects.get(id=user_id)
         enrolled = api_models.EnrolledCourse.objects.get(enrollment_id=enrollment_id)
+        if enrolled.user_id != user.id:
+            raise PermissionDenied("You can only access your own notes.")
 
         return api_models.Note.objects.filter(user=user, course=enrolled.course)
 
@@ -282,9 +433,12 @@ class StudentNoteCreateAPIView(generics.ListCreateAPIView):
         enrollment_id = request.data["enrollment_id"]
         title = request.data["title"]
         note = request.data["note"]
+        ensure_user_scope(request, user_id)
 
         user = User.objects.get(id=user_id)
         enrolled = api_models.EnrolledCourse.objects.get(enrollment_id=enrollment_id)
+        if enrolled.user_id != user.id:
+            raise PermissionDenied("You can only access your own notes.")
 
         api_models.Note.objects.create(
             user=user, course=enrolled.course, note=note, title=title
@@ -303,9 +457,12 @@ class StudentNoteDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         user_id = self.kwargs["user_id"]
         enrollment_id = self.kwargs["enrollment_id"]
         note_id = self.kwargs["note_id"]
+        ensure_user_scope(self.request, user_id)
 
         user = User.objects.get(id=user_id)
         enrolled = api_models.EnrolledCourse.objects.get(enrollment_id=enrollment_id)
+        if enrolled.user_id != user.id:
+            raise PermissionDenied("You can only access your own notes.")
         note = api_models.Note.objects.get(
             user=user, course=enrolled.course, id=note_id
         )
@@ -314,13 +471,14 @@ class StudentNoteDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 
 class StudentRateCourseCreateAPIView(generics.CreateAPIView):
     serializer_class = api_serializer.ReviewSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
         user_id = request.data["user_id"]
         course_id = request.data["course_id"]
         rating = request.data["rating"]
         review = request.data["review"]
+        ensure_user_scope(request, user_id)
 
         user = User.objects.get(id=user_id)
         course = api_models.Course.objects.get(id=course_id)
@@ -340,11 +498,12 @@ class StudentRateCourseCreateAPIView(generics.CreateAPIView):
 
 class StudentRateCourseUpdateAPIView(generics.RetrieveUpdateAPIView):
     serializer_class = api_serializer.ReviewSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_object(self):
         user_id = self.kwargs["user_id"]
         review_id = self.kwargs["review_id"]
+        ensure_user_scope(self.request, user_id)
 
         user = User.objects.get(id=user_id)
         return api_models.Review.objects.get(id=review_id, user=user)
@@ -352,16 +511,18 @@ class StudentRateCourseUpdateAPIView(generics.RetrieveUpdateAPIView):
 
 class StudentWishListListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = api_serializer.WishlistSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user_id = self.kwargs["user_id"]
+        ensure_user_scope(self.request, user_id)
         user = User.objects.get(id=user_id)
         return api_models.Wishlist.objects.filter(user=user)
 
     def create(self, request, *args, **kwargs):
         user_id = request.data["user_id"]
         course_id = request.data["course_id"]
+        ensure_user_scope(request, user_id)
 
         user = User.objects.get(id=user_id)
         course = api_models.Course.objects.get(id=course_id)
@@ -379,7 +540,7 @@ class StudentWishListListCreateAPIView(generics.ListCreateAPIView):
 
 class QuestionAnswerListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = api_serializer.Question_AnswerSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         course_id = self.kwargs["course_id"]
@@ -391,6 +552,7 @@ class QuestionAnswerListCreateAPIView(generics.ListCreateAPIView):
         user_id = request.data["user_id"]
         title = request.data["title"]
         message = request.data["message"]
+        ensure_user_scope(request, user_id)
 
         user = User.objects.get(id=user_id)
         course = api_models.Course.objects.get(id=course_id)
@@ -410,17 +572,23 @@ class QuestionAnswerListCreateAPIView(generics.ListCreateAPIView):
 
 class QuestionAnswerMessageSendAPIView(generics.CreateAPIView):
     serializer_class = api_serializer.Question_Answer_MessageSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
         course_id = request.data["course_id"]
         qa_id = request.data["qa_id"]
         user_id = request.data["user_id"]
         message = request.data["message"]
+        ensure_user_scope(request, user_id)
 
         user = User.objects.get(id=user_id)
         course = api_models.Course.objects.get(id=course_id)
         question = api_models.Question_Answer.objects.get(qa_id=qa_id)
+        if question.course_id != course.id:
+            return Response(
+                {"message": "Question does not belong to the provided course"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         api_models.Question_Answer_Message.objects.create(
             course=course, user=user, message=message, question=question
         )
@@ -433,11 +601,11 @@ class QuestionAnswerMessageSendAPIView(generics.CreateAPIView):
 
 class TeacherSummaryAPIView(generics.ListAPIView):
     serializer_class = api_serializer.TeacherSummarySerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         teacher_id = self.kwargs["teacher_id"]
-        teacher = api_models.Teacher.objects.get(id=teacher_id)
+        teacher = ensure_teacher_scope(self.request, teacher_id)
 
         one_month_ago = datetime.today() - timedelta(days=28)
 
@@ -489,38 +657,40 @@ class TeacherSummaryAPIView(generics.ListAPIView):
 
 class TeacherCourseListAPIView(generics.ListAPIView):
     serializer_class = api_serializer.CourseSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         teacher_id = self.kwargs["teacher_id"]
-        teacher = api_models.Teacher.objects.get(id=teacher_id)
+        teacher = ensure_teacher_scope(self.request, teacher_id)
         return api_models.Course.objects.filter(teacher=teacher)
 
 
 class TeacherReviewListAPIView(generics.ListAPIView):
     serializer_class = api_serializer.ReviewSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         teacher_id = self.kwargs["teacher_id"]
-        teacher = api_models.Teacher.objects.get(id=teacher_id)
+        teacher = ensure_teacher_scope(self.request, teacher_id)
         return api_models.Review.objects.filter(course__teacher=teacher)
 
 
 class TeacherReviewDetailAPIView(generics.RetrieveUpdateAPIView):
     serializer_class = api_serializer.ReviewSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_object(self):
         teacher_id = self.kwargs["teacher_id"]
         review_id = self.kwargs["review_id"]
-        teacher = api_models.Teacher.objects.get(id=teacher_id)
+        teacher = ensure_teacher_scope(self.request, teacher_id)
         return api_models.Review.objects.get(course__teacher=teacher, id=review_id)
 
 
 class TeacherStudentsListAPIVIew(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
     def list(self, request, teacher_id=None):
-        teacher = api_models.Teacher.objects.get(id=teacher_id)
+        teacher = ensure_teacher_scope(request, teacher_id)
 
         enrolled_courses = api_models.EnrolledCourse.objects.filter(teacher=teacher)
         unique_student_ids = set()
@@ -543,8 +713,9 @@ class TeacherStudentsListAPIVIew(viewsets.ViewSet):
 
 
 @api_view(("GET",))
+@permission_classes([IsAuthenticated])
 def TeacherAllMonthEarningAPIView(request, teacher_id):
-    teacher = api_models.Teacher.objects.get(id=teacher_id)
+    teacher = ensure_teacher_scope(request, teacher_id)
     monthly_earning_tracker = (
         api_models.CartOrderItem.objects.filter(
             teacher=teacher, order__payment_status="Paid"
@@ -559,8 +730,10 @@ def TeacherAllMonthEarningAPIView(request, teacher_id):
 
 
 class TeacherBestSellingCourseAPIView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
     def list(self, request, teacher_id=None):
-        teacher = api_models.Teacher.objects.get(id=teacher_id)
+        teacher = ensure_teacher_scope(request, teacher_id)
         courses_with_total_price = []
         courses = api_models.Course.objects.filter(teacher=teacher)
 
@@ -587,32 +760,32 @@ class TeacherBestSellingCourseAPIView(viewsets.ViewSet):
 
 class TeacherQuestionAnswerListAPIView(generics.ListAPIView):
     serializer_class = api_serializer.Question_AnswerSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         teacher_id = self.kwargs["teacher_id"]
-        teacher = api_models.Teacher.objects.get(id=teacher_id)
+        teacher = ensure_teacher_scope(self.request, teacher_id)
         return api_models.Question_Answer.objects.filter(course__teacher=teacher)
 
 
 class TeacherNotificationListAPIView(generics.ListAPIView):
     serializer_class = api_serializer.NotificationSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         teacher_id = self.kwargs["teacher_id"]
-        teacher = api_models.Teacher.objects.get(id=teacher_id)
+        teacher = ensure_teacher_scope(self.request, teacher_id)
         return api_models.Notification.objects.filter(teacher=teacher, seen=False)
 
 
 class TeacherNotificationDetailAPIView(generics.RetrieveUpdateAPIView):
     serializer_class = api_serializer.NotificationSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_object(self):
         teacher_id = self.kwargs["teacher_id"]
         noti_id = self.kwargs["noti_id"]
-        teacher = api_models.Teacher.objects.get(id=teacher_id)
+        teacher = ensure_teacher_scope(self.request, teacher_id)
         return api_models.Notification.objects.get(teacher=teacher, id=noti_id)
 
 
@@ -706,16 +879,18 @@ class CourseCreateAPIView(APIView):
 
 
 class CourseUpdateAPIView(generics.RetrieveUpdateAPIView):
-    querysect = api_models.Course.objects.all()
+    queryset = api_models.Course.objects.all()
     serializer_class = api_serializer.CourseSerializer
-    permisscion_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_object(self):
         teacher_id = self.kwargs["teacher_id"]
         course_id = self.kwargs["course_id"]
 
-        teacher = api_models.Teacher.objects.get(id=teacher_id)
+        teacher = ensure_teacher_scope(self.request, teacher_id)
         course = api_models.Course.objects.get(course_id=course_id)
+        if course.teacher_id != teacher.id:
+            raise PermissionDenied("You can only update your own course.")
 
         return course
 
@@ -737,7 +912,7 @@ class CourseUpdateAPIView(generics.RetrieveUpdateAPIView):
             course.file = request.data["file"]
 
         if (
-            "category" in request.data["category"]
+            "category" in request.data
             and request.data["category"] != "NaN"
             and request.data["category"] != "undefined"
         ):
@@ -861,7 +1036,7 @@ class CourseUpdateAPIView(generics.RetrieveUpdateAPIView):
         serializer.save(course=course_instance)
 
 
-class CourseDetailAPIView(generics.RetrieveDestroyAPIView):
+class CourseDetailAPIView(generics.RetrieveAPIView):
     serializer_class = api_serializer.CourseSerializer
     permission_classes = [AllowAny]
 
@@ -872,7 +1047,7 @@ class CourseDetailAPIView(generics.RetrieveDestroyAPIView):
 
 class CourseVariantDeleteAPIView(generics.DestroyAPIView):
     serializer_class = api_serializer.VariantSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_object(self):
         variant_id = self.kwargs["variant_id"]
@@ -881,7 +1056,7 @@ class CourseVariantDeleteAPIView(generics.DestroyAPIView):
 
         print("variant_id ========", variant_id)
 
-        teacher = api_models.Teacher.objects.get(id=teacher_id)
+        teacher = ensure_teacher_scope(self.request, teacher_id)
         course = api_models.Course.objects.get(teacher=teacher, course_id=course_id)
         return api_models.Variant.objects.get(id=variant_id)
 
@@ -896,7 +1071,7 @@ class CourseVariantItemDeleteAPIVIew(generics.DestroyAPIView):
         teacher_id = self.kwargs["teacher_id"]
         course_id = self.kwargs["course_id"]
 
-        teacher = api_models.Teacher.objects.get(id=teacher_id)
+        teacher = ensure_teacher_scope(self.request, teacher_id)
         course = api_models.Course.objects.get(teacher=teacher, course_id=course_id)
         variant = api_models.Variant.objects.get(variant_id=variant_id, course=course)
         return api_models.VariantItem.objects.get(
@@ -905,7 +1080,7 @@ class CourseVariantItemDeleteAPIVIew(generics.DestroyAPIView):
 
 
 class FileUploadAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     parser_classes = (
         MultiPartParser,
         FormParser,

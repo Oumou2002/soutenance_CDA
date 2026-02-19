@@ -1,16 +1,15 @@
-import React, { useState, useEffect, useContext } from "react";
+import { useContext, useEffect, useState } from "react";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 import Sidebar from "./Partials/Sidebar";
 import Header from "./Partials/Header";
-
 import useAxios from "../../utils/useAxios";
 import UserData from "../plugin/UserData";
 import Toast from "../plugin/Toast";
 import { ProfileContext } from "../plugin/Context";
 
 function Profile() {
-    const [profile, setProfile] = useContext(ProfileContext);
+    const [, setProfile] = useContext(ProfileContext);
     const [profileData, setProfileData] = useState({
         image: "",
         full_name: "",
@@ -21,7 +20,6 @@ function Profile() {
 
     const fetchProfile = () => {
         useAxios.get(`user/profile/${UserData()?.user_id}/`).then((res) => {
-            console.log(res.data);
             setProfile(res.data);
             setProfileData(res.data);
             setImagePreview(res.data.image);
@@ -33,135 +31,158 @@ function Profile() {
     }, []);
 
     const handleProfileChange = (event) => {
-        setProfileData({
-            ...profileData,
+        setProfileData((prev) => ({
+            ...prev,
             [event.target.name]: event.target.value,
-        });
+        }));
     };
 
     const handleFileChange = (event) => {
-        const selectedFile = event.target.files[0];
-        setProfileData({
-            ...profileData,
-            [event.target.name]: selectedFile,
-        });
+        const selectedFile = event.target.files?.[0];
+        if (!selectedFile) return;
+
+        setProfileData((prev) => ({
+            ...prev,
+            image: selectedFile,
+        }));
 
         const reader = new FileReader();
-        reader.onloadend = () => {
-            setImagePreview(reader.result);
-        };
-
-        if (selectedFile) {
-            reader.readAsDataURL(selectedFile);
-        }
+        reader.onloadend = () => setImagePreview(reader.result);
+        reader.readAsDataURL(selectedFile);
     };
 
-    const handleFormSubmit = async (e) => {
-        e.preventDefault();
+    const handleFormSubmit = async (event) => {
+        event.preventDefault();
 
-        const res = await useAxios.get(`user/profile/${UserData()?.user_id}/`);
-        const formdata = new FormData();
-        if (profileData.image && profileData.image !== res.data.image) {
-            formdata.append("image", profileData.image);
-        }
+        try {
+            const currentProfile = await useAxios.get(`user/profile/${UserData()?.user_id}/`);
+            const formdata = new FormData();
 
-        formdata.append("full_name", profileData.full_name);
-        formdata.append("about", profileData.about);
-        formdata.append("country", profileData.country);
+            if (profileData.image && profileData.image !== currentProfile.data.image) {
+                formdata.append("image", profileData.image);
+            }
 
-        await useAxios
-            .patch(`user/profile/${UserData()?.user_id}/`, formdata, {
+            formdata.append("full_name", profileData.full_name || "");
+            formdata.append("about", profileData.about || "");
+            formdata.append("country", profileData.country || "");
+
+            const updated = await useAxios.patch(`user/profile/${UserData()?.user_id}/`, formdata, {
                 headers: {
                     "Content-Type": "multipart/form-data",
                 },
-            })
-            .then((res) => {
-                console.log(res.data);
-                setProfile(res.data);
             });
-    };
 
-    console.log(imagePreview);
+            setProfile(updated.data);
+            setProfileData(updated.data);
+            setImagePreview(updated.data.image);
+            Toast().fire({
+                icon: "success",
+                title: "Profil mis a jour.",
+            });
+        } catch (error) {
+            Toast().fire({
+                icon: "error",
+                title: "Impossible de mettre a jour le profil.",
+            });
+        }
+    };
 
     return (
         <>
             <BaseHeader />
 
-            <section className="pt-5 pb-5">
+            <section className="workspace-shell">
                 <div className="container">
-                    {/* Header Here */}
                     <Header />
                     <div className="row mt-0 mt-md-4">
-                        {/* Sidebar Here */}
                         <Sidebar />
+
                         <div className="col-lg-9 col-md-8 col-12">
-                            {/* Card */}
-                            <div className="card">
-                                {/* Card header */}
-                                <div className="card-header">
-                                    <h3 className="mb-0">Profile Details</h3>
-                                    <p className="mb-0">You have full control to manage your own account setting.</p>
+                            <div className="workspace-title-row">
+                                <h2 className="workspace-title">
+                                    <i className="fas fa-user-circle"></i> Mon profil
+                                </h2>
+                            </div>
+
+                            <div className="workspace-panel">
+                                <div className="workspace-panel-head">
+                                    <h3>Informations personnelles</h3>
+                                    <p className="workspace-subtitle">
+                                        Gere ton identite, ta bio et ton pays depuis cet espace.
+                                    </p>
                                 </div>
-                                {/* Card body */}
-                                <form className="card-body" onSubmit={handleFormSubmit}>
-                                    <div className="d-lg-flex align-items-center justify-content-between">
-                                        <div className="d-flex align-items-center mb-4 mb-lg-0">
-                                            <img
-                                                src={imagePreview}
-                                                id="img-uploaded"
-                                                className="avatar-xl rounded-circle"
-                                                alt="avatar"
-                                                style={{
-                                                    width: "100px",
-                                                    height: "100px",
-                                                    borderRadius: "50%",
-                                                    objectFit: "cover",
-                                                }}
+
+                                <form className="workspace-panel-body" onSubmit={handleFormSubmit}>
+                                    <div className="workspace-avatar-block">
+                                        <img
+                                            src={imagePreview || "https://www.eclosio.ong/wp-content/uploads/2018/08/default.png"}
+                                            className="workspace-avatar"
+                                            alt="avatar utilisateur"
+                                        />
+                                        <div className="w-100">
+                                            <h4 className="workspace-section-title">Photo de profil</h4>
+                                            <p className="workspace-section-text">
+                                                Format conseille: JPG ou PNG, ratio carre.
+                                            </p>
+                                            <input
+                                                type="file"
+                                                className="form-control mt-2"
+                                                name="image"
+                                                onChange={handleFileChange}
                                             />
-                                            <div className="ms-3">
-                                                <h4 className="mb-0">Your avatar</h4>
-                                                <p className="mb-0">PNG or JPG no bigger than 800px wide and tall.</p>
-                                                <input type="file" className="form-control mt-3" name="image" onChange={handleFileChange} id="" />
-                                            </div>
                                         </div>
                                     </div>
-                                    <hr className="my-5" />
-                                    <div>
-                                        <h4 className="mb-0">Personal Details</h4>
-                                        <p className="mb-4">Edit your personal information and address.</p>
-                                        {/* Form */}
-                                        <div className="row gx-3">
-                                            {/* First name */}
-                                            <div className="mb-3 col-12 col-md-12">
-                                                <label className="form-label" htmlFor="fname">
-                                                    Full Name
-                                                </label>
-                                                <input type="text" id="fname" className="form-control" placeholder="First Name" required="" value={profileData.full_name} onChange={handleProfileChange} name="full_name" />
-                                                <div className="invalid-feedback">Please enter first name.</div>
-                                            </div>
-                                            {/* Last name */}
-                                            <div className="mb-3 col-12 col-md-12">
-                                                <label className="form-label" htmlFor="lname">
-                                                    About Me
-                                                </label>
-                                                <textarea onChange={handleProfileChange} name="about" id="" cols="30" rows="5" className="form-control" value={profileData.about}></textarea>
-                                                <div className="invalid-feedback">Please enter last name.</div>
-                                            </div>
 
-                                            {/* Country */}
-                                            <div className="mb-3 col-12 col-md-12">
-                                                <label className="form-label" htmlFor="editCountry">
-                                                    Country
-                                                </label>
-                                                <input type="text" id="country" className="form-control" placeholder="Country" required="" value={profileData.country} onChange={handleProfileChange} name="country" />
-                                                <div className="invalid-feedback">Please choose country.</div>
-                                            </div>
-                                            <div className="col-12">
-                                                {/* Button */}
-                                                <button className="btn btn-primary" type="submit">
-                                                    Update Profile <i className="fas fa-check-circle"></i>
-                                                </button>
-                                            </div>
+                                    <div className="workspace-grid">
+                                        <div className="workspace-grid-full">
+                                            <label className="form-label" htmlFor="student-full-name">
+                                                Nom complet
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="student-full-name"
+                                                className="form-control"
+                                                placeholder="Nom complet"
+                                                value={profileData.full_name || ""}
+                                                onChange={handleProfileChange}
+                                                name="full_name"
+                                            />
+                                        </div>
+
+                                        <div className="workspace-grid-full">
+                                            <label className="form-label" htmlFor="student-about">
+                                                A propos
+                                            </label>
+                                            <textarea
+                                                onChange={handleProfileChange}
+                                                name="about"
+                                                id="student-about"
+                                                rows="5"
+                                                className="form-control"
+                                                placeholder="Decris ton parcours, tes objectifs et ton domaine."
+                                                value={profileData.about || ""}
+                                            ></textarea>
+                                        </div>
+
+                                        <div>
+                                            <label className="form-label" htmlFor="student-country">
+                                                Pays
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="student-country"
+                                                className="form-control"
+                                                placeholder="Pays"
+                                                value={profileData.country || ""}
+                                                onChange={handleProfileChange}
+                                                name="country"
+                                            />
+                                        </div>
+
+                                        <div className="d-flex align-items-end">
+                                            <button className="btn btn-primary w-100" type="submit">
+                                                Mettre a jour le profil <i className="fas fa-check-circle"></i>
+                                            </button>
                                         </div>
                                     </div>
                                 </form>

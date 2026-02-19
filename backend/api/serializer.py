@@ -8,6 +8,10 @@ from userauths.models import Profile, User
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    default_error_messages = {
+        "no_active_account": "Aucun compte actif trouve avec ces identifiants.",
+    }
+
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
@@ -19,9 +23,18 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             token["teacher_id"] = user.teacher.id
         except:
             token["teacher_id"] = 0
-        
-        print(token)
+
         return token
+
+    def validate(self, attrs):
+        email_field = self.username_field
+        raw_email = (attrs.get(email_field) or "").strip()
+
+        if raw_email:
+            user = User.objects.filter(email__iexact=raw_email).first()
+            attrs[email_field] = user.email if user else raw_email.lower()
+
+        return super().validate(attrs)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -35,9 +48,17 @@ class RegisterSerializer(serializers.ModelSerializer):
         fields = ["full_name", "email", "password", "password2"]
 
     def validate(self, attr):
+        attr["email"] = (attr.get("email") or "").strip().lower()
+        attr["full_name"] = (attr.get("full_name") or "").strip()
+
+        if User.objects.filter(email__iexact=attr["email"]).exists():
+            raise serializers.ValidationError(
+                {"email": "Un compte existe deja avec cette adresse e-mail."}
+            )
+
         if attr["password"] != attr["password2"]:
             raise serializers.ValidationError(
-                {"password": "Password fields didn't match."}
+                {"password": "Les mots de passe ne correspondent pas."}
             )
 
         return attr
@@ -201,6 +222,33 @@ class CountrySerializer(serializers.ModelSerializer):
     class Meta:
         fields = "__all__"
         model = api_models.Country
+
+
+class CartOrderItemSerializer(serializers.ModelSerializer):
+    course = serializers.SerializerMethodField()
+
+    class Meta:
+        fields = [
+            "id",
+            "course",
+            "price",
+            "tax_fee",
+            "total",
+            "country",
+            "cart_id",
+            "date",
+        ]
+        model = api_models.CartOrderItem
+
+    def get_course(self, obj):
+        return {
+            "id": obj.course.id,
+            "title": obj.course.title,
+            "slug": obj.course.slug,
+            "image": obj.course.image,
+            "price": obj.course.price,
+            "teacher": obj.course.teacher.full_name if obj.course.teacher else None,
+        }
 
 
 class EnrolledCourseSerializer(serializers.ModelSerializer):
